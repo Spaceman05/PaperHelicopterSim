@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 #import pygame
 
 class Sim:
-    ## This class is a container for global constants
+    ## This class is a container for global values
     dt = 0.01
     Grav = 1    ## Gravitational acceleration
     AirDensity = 1
@@ -17,10 +17,10 @@ class Sim:
 
 class Helicopter:
     ## This class manages variables of the test object
-    def __init__(self, bladeLen, bladeWid, bladeThk, coreLen, coreWid, mass):
+    def __init__(self, bladeLen, bladeWid, thickness, coreLen, coreWid, mass):
         self.bladeLen = bladeLen
         self.bladeWid = bladeWid
-        self.bladeThk = bladeThk #thickness
+        self.thickness = thickness #thickness
 
         self.bladeArea = bladeLen * bladeWid
         self.bladeAngle = np.pi/4   ## The angle from vertical
@@ -29,7 +29,13 @@ class Helicopter:
         self.coreWid = coreWid
         self.mass = mass
 
-        
+        ## Iblade = T * (L^2 + W^2) * (m/3)
+        self.bladeMomentOfInertia = thickness * (bladeLen**2 + bladeWid**2)*mass/3
+
+        ## Icore = T * L * W^2 * m/12
+        self.coreMomentOfInertia = thickness * coreLen * (coreWid**2) * mass/12
+
+        self.Itotal = self.coreMomentOfInertia + (2 * self.bladeMomentOfInertia)
 
                         ## Z-Coordinate is irrelevant since the environment is uniform
         self.theta = 0  ## Current angle of the object
@@ -38,7 +44,7 @@ class Helicopter:
         self.dtheta = 0 ## Angular motion
 
         self.d2z = 0    ## Downward acceleration
-        self.d2theta = 0 # Angular acceleration
+        self.d2theta = 0## Angular acceleration
 
 
         ## Subplot for this object
@@ -55,14 +61,15 @@ class Helicopter:
         self.gravitate()
         self.airDrag()
 
-        #print(self.d2z)
-        #print(self.dz)
+        self.testRotate()
 
         self.dz += self.d2z * Sim.dt
 
         self.dtheta += self.d2theta * Sim.dt    ## Change angular velocity by angular acceleration
         self.theta += self.dtheta * Sim.dt      ## Change angle by angular velocity
 
+
+        ## Plot the data from this iteration
         self.axVelocity.plot(Sim.t, self.dz, "b,")
         self.axAngularV.plot(Sim.t, self.dtheta, "b,")
         self.axAcceleration.plot(Sim.t, self.d2z, "b,")
@@ -80,6 +87,14 @@ class Helicopter:
         # then x2 for 2 blades
 
         self.d2z -= Sim.AirDensity * (self.dz)**2 * self.bladeArea/ self.mass
+
+    def testRotate(self):
+        ## Apply a torque to the blades based on air resistance
+        # tau = air drag * half blade width
+
+        tau = self.bladeWid * (Sim.AirDensity * (self.dz)**2 * self.bladeArea/ self.mass)
+
+        self.d2theta += tau * self.Itotal
 
 def simLoop(objects):
     stop = False

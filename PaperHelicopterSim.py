@@ -70,10 +70,10 @@ class Helicopter:
 
 
         ## Plot the data from this iteration
-        self.axVelocity.plot(Sim.t, self.dz, "b,")
-        self.axAngularV.plot(Sim.t, self.dtheta, "b,")
-        self.axAcceleration.plot(Sim.t, self.d2z, "b,")
-        self.axAngularA.plot(Sim.t, self.d2theta, "b,")
+        self.axVelocity.plot(Sim.t, self.dz, "b.")
+        self.axAngularV.plot(Sim.t, self.dtheta, "b.")
+        self.axAcceleration.plot(Sim.t, self.d2z, "b.")
+        self.axAngularA.plot(Sim.t, self.d2theta, "b.")
 
         
 
@@ -82,19 +82,28 @@ class Helicopter:
         self.d2z += self.mass * Sim.Grav
 
     def airDrag(self):
-        ## Cause the object to deccelerate due to air resistance
+        ## Cause the object to decelerate due to air resistance
         # upward F = 1/2 rho v^2 Cd A
         # then x2 for 2 blades
 
         self.d2z -= Sim.AirDensity * (self.dz)**2 * self.bladeArea/ self.mass
 
+        ## Cause the object to angularly decelerate due to the same (windward side of the edge of the paper)
+        # backward torque, tau = 1/8 rho omega^2 H [x^4](from a to b)
+
+        ## Torque on the core
+        self.d2theta -= self.Itotal * Sim.AirDensity * self.dtheta**2 * self.coreLen * (self.coreWid**4) / 32
+
+        ## Torque on the blades
+        self.d2theta -= self.Itotal * Sim.AirDensity * self.dtheta**2 * self.bladeWid * (self.bladeLen**2) / 4
+        
     def testRotate(self):
         ## Apply a torque to the blades based on air resistance
         # tau = air drag * half blade width
 
         tau = self.bladeWid * (Sim.AirDensity * (self.dz)**2 * self.bladeArea/ self.mass)
 
-        self.d2theta += tau * self.Itotal
+        self.d2theta += tau / self.Itotal
 
 def simLoop(objects):
     stop = False

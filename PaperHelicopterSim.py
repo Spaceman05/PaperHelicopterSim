@@ -92,10 +92,10 @@ class Helicopter:
         # backward torque, tau = 1/8 rho omega^2 H [x^4](from a to b)
 
         ## Torque on the core
-        self.d2theta -= self.Itotal * Sim.AirDensity * self.dtheta**2 * self.coreLen * (self.coreWid**4) / 32
+        self.d2theta -= Sim.AirDensity * self.dtheta**2 * self.coreLen * (self.coreWid**4) / (self.Itotal * 32)
 
         ## Torque on the blades
-        self.d2theta -= self.Itotal * Sim.AirDensity * self.dtheta**2 * self.bladeWid * (self.bladeLen**2) / 4
+        self.d2theta -= Sim.AirDensity * self.dtheta**2 * self.bladeWid * (self.bladeLen**2) / (self.Itotal * 4)
         
     def testRotate(self):
         ## Apply a torque to the blades based on air resistance

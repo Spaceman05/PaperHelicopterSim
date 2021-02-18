@@ -23,7 +23,7 @@ class Helicopter:
         self.thickness = thickness #thickness
 
         self.bladeArea = bladeLen * bladeWid
-        self.bladeAngle = np.pi/4   ## The angle from vertical
+        self.bladeAngle = np.pi / 5#0   ## The angle from horizontal
         
         self.coreLen = coreLen
         self.coreWid = coreWid
@@ -61,7 +61,7 @@ class Helicopter:
         self.gravitate()
         self.airDrag()
 
-        self.testRotate()
+        self.dragRotate()
 
         self.dz += self.d2z * Sim.dt
 
@@ -86,7 +86,7 @@ class Helicopter:
         # upward F = 1/2 rho v^2 Cd A
         # then x2 for 2 blades
 
-        self.d2z -= Sim.AirDensity * (self.dz)**2 * self.bladeArea/ self.mass
+        self.d2z -= Sim.AirDensity * (self.dz**2) * self.bladeArea * (np.cos(self.bladeAngle)**2) / self.mass
 
         ## Cause the object to angularly decelerate due to the same (windward side of the edge of the paper)
         # backward torque, tau = 1/8 rho omega^2 H [x^4](from a to b)
@@ -94,14 +94,16 @@ class Helicopter:
         ## Torque on the core
         self.d2theta -= Sim.AirDensity * self.dtheta**2 * self.coreLen * (self.coreWid**4) / (self.Itotal * 32)
 
-        ## Torque on the blades
+        ## Torque on the blades 
         self.d2theta -= Sim.AirDensity * self.dtheta**2 * self.bladeWid * (self.bladeLen**2) / (self.Itotal * 4)
         
-    def testRotate(self):
+    def dragRotate(self):
         ## Apply a torque to the blades based on air resistance
         # tau = air drag * half blade width
 
-        tau = self.bladeWid * (Sim.AirDensity * (self.dz)**2 * self.bladeArea/ self.mass)
+        F = Sim.AirDensity * (self.dz**2) * self.bladeArea * np.cos(self.bladeAngle)
+
+        tau = F * np.sin(self.bladeAngle) * self.bladeWid / 2
 
         self.d2theta += tau / self.Itotal
 

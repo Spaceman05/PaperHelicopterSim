@@ -5,6 +5,8 @@
 
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.widgets import Button as btn
+from datetime import datetime
 #import pygame
 
 class Sim:
@@ -14,6 +16,7 @@ class Sim:
     AirDensity = 1
 
     t = 0
+    stop = False
 
 class Helicopter:
     ## This class manages variables of the test object
@@ -23,7 +26,9 @@ class Helicopter:
         self.thickness = thickness #thickness
 
         self.bladeArea = bladeLen * bladeWid
-        self.bladeAngle = np.pi / 5#0   ## The angle from horizontal
+
+        self.bladeRigidity = 2      ## The resistance to bending
+        self.bladeAngle = 0         ## The angle from horizontal
         
         self.coreLen = coreLen
         self.coreWid = coreWid
@@ -48,11 +53,16 @@ class Helicopter:
 
 
         ## Subplot for this object
-        self.fig = plt.figure(figsize = (15, 5))
-        self.axVelocity = plt.subplot(2, 2, 1, ylabel = "Downward Velocity")
-        self.axAngularV = plt.subplot(2, 2, 2, ylabel = "Angular Velocity")
-        self.axAcceleration = plt.subplot(2, 2, 3, ylabel = "Downward Acceleration")
-        self.axAngularA = plt.subplot(2, 2, 4, ylabel = "Angular Acceleration")
+        self.fig = plt.figure(figsize = (16, 5))
+        self.axVelocity = plt.subplot(2, 3, 1, ylabel = "Downward Velocity")
+        self.axAngularV = plt.subplot(2, 3, 2, ylabel = "Angular Velocity")
+        self.axAcceleration = plt.subplot(2, 3, 4, ylabel = "Downward Acceleration")
+        self.axAngularA = plt.subplot(2, 3, 5, ylabel = "Angular Acceleration")
+        self.axBladeAngle = plt.subplot(2, 3, 3, ylabel = "Blade Angle")
+
+        axExportBtn = plt.subplot(2, 3, 6)
+        self.btnExport = btn(axExportBtn, "Export", hovercolor='0.95')
+        self.btnExport.on_clicked(self.exportData)
 
     def simulate(self):
         self.d2z = 0
@@ -62,6 +72,8 @@ class Helicopter:
         self.airDrag()
 
         self.dragRotate()
+
+        self.bendBlades()
 
         self.dz += self.d2z * Sim.dt
 
@@ -74,6 +86,7 @@ class Helicopter:
         self.axAngularV.plot(Sim.t, self.dtheta, "b.")
         self.axAcceleration.plot(Sim.t, self.d2z, "b.")
         self.axAngularA.plot(Sim.t, self.d2theta, "b.")
+        self.axBladeAngle.plot(Sim.t, self.bladeAngle, "b.")
 
         
 
@@ -107,9 +120,35 @@ class Helicopter:
 
         self.d2theta += tau / self.Itotal
 
+    def bendBlades(self):
+        ## Cause the joint of the blades to the core to bend
+        self.bladeAngle += Sim.dt * ((1/2) * Sim.AirDensity * (self.dz**2) * self.bladeArea * np.cos(self.bladeAngle)) * self.bladeLen / (2 * (self.bladeWid * self.bladeLen**3 / 3))
+        self.bladeAngle -= Sim.dt * self.bladeRigidity * self.bladeAngle
+
+    def exportData(self, event):
+        ## Write the data to a .txt file, can be loaded back in using exec()
+        with open("data\/" + datetime.now().strftime("%m_%d_%y__%H_%M_%S") + ".txt", "w") as dat:
+            dat.write("self.bladeLen = "   + str(self.bladeLen))
+            dat.write("\nself.bladeWid = " + str(self.bladeWid))
+            dat.write("\nself.thickness = "+ str(self.thickness))
+            dat.write("\nself.bladeArea = "+ str(self.bladeArea))
+            dat.write("\nself.bladeRigidity = " + str(self.bladeRigidity))
+            dat.write("\nself.coreLen = "  + str(self.coreLen))
+            dat.write("\nself.coreWid = "  + str(self.coreWid))
+            dat.write("\nself.mass = " + str(self.mass))
+            dat.write("\n")
+            dat.write("\nself.tAxis = " + str([round(Line.get_xdata()[0], 15) for Line in self.axVelocity.lines]))
+            dat.write("\nself.vzAxis = " + str([round(Line.get_ydata()[0], 15) for Line in self.axVelocity.lines]))
+            dat.write("\nself.vthetaAxis = " + str([round(Line.get_ydata()[0], 15) for Line in self.axAngularV.lines]))
+            dat.write("\nself.azAxis = " + str([round(Line.get_ydata()[0], 15) for Line in self.axAcceleration.lines]))
+            dat.write("\nself.athetaAxis = " + str([round(Line.get_ydata()[0], 15) for Line in self.axAngularA.lines]))
+            dat.write("\nself.bladeAngleAxis = " + str([round(Line.get_ydata()[0], 15) for Line in self.axBladeAngle.lines]))
+
+        Sim.stop = True
+            
+
 def simLoop(objects):
-    stop = False
-    while not stop:
+    while not Sim.stop:
         for obj in objects:
             obj.simulate()
 

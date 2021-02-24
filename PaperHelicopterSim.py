@@ -12,8 +12,8 @@ from datetime import datetime
 class Sim:
     ## This class is a container for global values
     dt = 0.01
-    Grav = 1    ## Gravitational acceleration
-    AirDensity = 1
+    Grav = 9.8    ## Gravitational acceleration
+    AirDensity = 1.22 * 1.28    ## Absorb the drag coefficient in here
 
     t = 0
     stop = False
@@ -28,7 +28,7 @@ class Helicopter:
         self.bladeArea = bladeLen * bladeWid
 
         self.bladeRigidity = 2      ## The resistance to bending
-        self.bladeAngle = 0         ## The angle from horizontal
+        self.bladeAngle = np.pi/6#0         ## The angle from horizontal
         
         self.coreLen = coreLen
         self.coreWid = coreWid
@@ -88,11 +88,14 @@ class Helicopter:
         self.axAngularA.plot(Sim.t, self.d2theta, "b.")
         self.axBladeAngle.plot(Sim.t, self.bladeAngle, "b.")
 
+        if self.d2z < 1e-6 and self.d2theta < 1e-3:
+            self.exportData("")
+
         
 
     def gravitate(self):
         ## Cause the object to accelerate downwards
-        self.d2z += self.mass * Sim.Grav
+        self.d2z += Sim.Grav
 
     def airDrag(self):
         ## Cause the object to decelerate due to air resistance
@@ -105,11 +108,9 @@ class Helicopter:
         # backward torque, tau = 1/8 rho omega^2 H [x^4](from a to b)
 
         ## Torque on the core
-        self.d2theta -= Sim.AirDensity * self.dtheta**2 * self.coreLen * (self.coreWid**4) / (self.Itotal * 32)
-
-        ## Torque on the blades 
-        self.d2theta -= Sim.AirDensity * self.dtheta**2 * self.bladeWid * (self.bladeLen**2) / (self.Itotal * 4)
+        self.d2theta -= Sim.AirDensity * (self.dtheta**2) * self.coreLen * (self.coreWid**4) / (self.Itotal * 32)
         
+
     def dragRotate(self):
         ## Apply a torque to the blades based on air resistance
         # tau = air drag * half blade width
@@ -120,14 +121,11 @@ class Helicopter:
 
         self.d2theta += tau / self.Itotal
 
-    def bendBlades(self):
-        ## Cause the joint of the blades to the core to bend
-        self.bladeAngle += Sim.dt * ((1/2) * Sim.AirDensity * (self.dz**2) * self.bladeArea * np.cos(self.bladeAngle)) * self.bladeLen / (2 * (self.bladeWid * self.bladeLen**3 / 3))
-        self.bladeAngle -= Sim.dt * self.bladeRigidity * self.bladeAngle
+
 
     def exportData(self, event):
         ## Write the data to a .txt file, can be loaded back in using exec()
-        with open("data\/" + datetime.now().strftime("%m_%d_%y__%H_%M_%S") + ".txt", "w") as dat:
+        with open("data\/" + datetime.now().strftime("%m_%d_%y__%H_%M_%S_%f") + ".txt", "w") as dat:
             dat.write("self.bladeLen = "   + str(self.bladeLen))
             dat.write("\nself.bladeWid = " + str(self.bladeWid))
             dat.write("\nself.thickness = "+ str(self.thickness))
@@ -145,15 +143,22 @@ class Helicopter:
             dat.write("\nself.bladeAngleAxis = " + str([round(Line.get_ydata()[0], 15) for Line in self.axBladeAngle.lines]))
 
         Sim.stop = True
+        plt.close()
             
 
-def simLoop(objects):
+def simLoop(helicopterObject, headless):
+    Sim.stop = False
+    Sim.t = 0
     while not Sim.stop:
-        for obj in objects:
-            obj.simulate()
+        helicopterObject.simulate()
 
-            Sim.t += Sim.dt
+        Sim.t += Sim.dt
+        if not headless:
             plt.pause(Sim.dt)
 
-helicopters = [Helicopter(1, 1, 0.1, 1, 1, 1)]
-simLoop(helicopters)
+for w, width in enumerate(np.arange(0.05, 0.165, 0.005)):
+    for l, length in enumerate(np.arange(0.08, 0.205, 0.005)):
+        print(str(w) + ", " + str(l) + ":\t" + str(round(width, 3)) + ", " + str(round(length, 3)))
+        simLoop(Helicopter(round(length, 3), round(width, 3), 0.001, 0.05, 0.05, 0.005), True)
+        
+

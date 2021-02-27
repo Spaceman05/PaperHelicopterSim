@@ -19,17 +19,18 @@ class GlobalAxes:
 ##    axColourKey = plt.axes([0.96, 0.25, 0.01, 0.5], xlabel = "Colour Key", ylabel = "Colour key: blade area ($m^2$)", ylim = [0, 0.035])
 ##    axColourKey.get_xaxis().set_visible(False)
 
-    #plt.subplots_adjust(left = None, bottom = None, right = None, top= None, wspace = None, hspace = 0.8)        
     plt.tight_layout()
 
 class SingleRun:
     maxArea = 0
     maxT = 0
-    def __init__(self, filename):   
+    def __init__(self, filename):
+        ## Load and execute each line of the data file
         with open(filename, "r") as dat:
             while (line := dat.read()) != "":
                 exec(line)
 
+        ## Determine the highest area and longest time duration
         if self.bladeArea > SingleRun.maxArea:
             SingleRun.maxArea = float(self.bladeArea)
         if self.tAxis[-1] > SingleRun.maxT:
@@ -39,19 +40,21 @@ class SingleRun:
     def plot(self):
         self.tAxis[-1] = SingleRun.maxT
 
+        ## Highest area is shown in red, 0 in blue
         colour = (lambda area: ((self.bladeArea / SingleRun.maxArea), 0, 1-(self.bladeArea / SingleRun.maxArea)))(self.bladeArea)
-                
+
+        ## Plot all data        
         GlobalAxes.axVelocity.plot(self.tAxis, self.vzAxis, color = (colour))
         GlobalAxes.axAngularV.plot(self.tAxis, self.vthetaAxis, color = (colour))
         GlobalAxes.axAcceleration.plot(self.tAxis, self.azAxis, color = (colour))
         GlobalAxes.axAngularA.plot(self.tAxis, self.athetaAxis, color = (colour))
-        #GlobalAxes.axBladeAngle.plot(self.tAxis, self.bladeAngleAxis, color = (colour))
 
         GlobalAxes.axTerminalVWid.plot(self.bladeWid, self.vzAxis[-1], ".", color = (colour))
         GlobalAxes.axTerminalVLen.plot(self.bladeLen, self.vzAxis[-1], ".", color = (colour))
         GlobalAxes.axTerminalThetaWid.plot(self.bladeWid, self.vthetaAxis[-1], ".", color = (colour))
         GlobalAxes.axTerminalThetaLen.plot(self.bladeLen, self.vthetaAxis[-1], ".", color = (colour))
 
+        ## Colour key plot; excluded for visual clarity, but can easily be reintroduced
 ##        GlobalAxes.axColourKey.plot(0, self.bladeArea, ".", color = colour)
 
 runs = [SingleRun("data\\" + file) for file in os.listdir("data")]

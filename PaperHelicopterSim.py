@@ -7,7 +7,6 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.widgets import Button as btn
 from datetime import datetime
-#import pygame
 
 class Sim:
     ## This class is a container for global values
@@ -28,7 +27,7 @@ class Helicopter:
         self.bladeArea = bladeLen * bladeWid
 
         self.bladeRigidity = 2      ## The resistance to bending
-        self.bladeAngle = np.pi/6#0         ## The angle from horizontal
+        self.bladeAngle = np.pi/6   ## The angle from horizontal
         
         self.coreLen = coreLen
         self.coreWid = coreWid
@@ -73,8 +72,6 @@ class Helicopter:
 
         self.dragRotate()
 
-        self.bendBlades()
-
         self.dz += self.d2z * Sim.dt
 
         self.dtheta += self.d2theta * Sim.dt    ## Change angular velocity by angular acceleration
@@ -88,10 +85,9 @@ class Helicopter:
         self.axAngularA.plot(Sim.t, self.d2theta, "b.")
         self.axBladeAngle.plot(Sim.t, self.bladeAngle, "b.")
 
+        ## If the system is stable, output and finish
         if self.d2z < 1e-6 and self.d2theta < 1e-3:
             self.exportData("")
-
-        
 
     def gravitate(self):
         ## Cause the object to accelerate downwards
@@ -147,18 +143,19 @@ class Helicopter:
             
 
 def simLoop(helicopterObject, headless):
+    ## Reset
     Sim.stop = False
     Sim.t = 0
+    
     while not Sim.stop:
         helicopterObject.simulate()
 
         Sim.t += Sim.dt
-        if not headless:
+        if not headless:    ## Only dislay graphs if headless is False
             plt.pause(Sim.dt)
 
 for w, width in enumerate(np.arange(0.05, 0.165, 0.005)):
     for l, length in enumerate(np.arange(0.08, 0.205, 0.005)):
         print(str(w) + ", " + str(l) + ":\t" + str(round(width, 3)) + ", " + str(round(length, 3)))
         simLoop(Helicopter(round(length, 3), round(width, 3), 0.001, 0.05, 0.05, 0.005), True)
-        
-
+    
